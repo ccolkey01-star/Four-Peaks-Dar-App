@@ -33,7 +33,7 @@ export async function POST(req: NextRequest){
 
     async function putFile(bucket:'dar-photos'|'dar-videos', f: File){
       const buf = Buffer.from(await f.arrayBuffer())
-      const hash = crypto.createHash('sha256').update(buf).digest('hex')
+      const hash = crypto.createHash('sha256').update(Uint8Array.from(buf)).digest('hex')
       const ext = (f.name?.split('.').pop() || 'bin').toLowerCase()
       const path = `${user.id}/${reportId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
       const { error: upErr } = await supabaseAdmin.storage.from(bucket).upload(path, buf, { contentType: (f as any).type || 'application/octet-stream' })
