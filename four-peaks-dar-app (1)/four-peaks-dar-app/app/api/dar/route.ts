@@ -31,16 +31,12 @@ export async function POST(req: NextRequest) {
     const videoUrls: any[] = []
     const fileHashes: any[] = []
 
-    // Upload helper (arrow fn so it’s allowed inside this scope)
+    // Safe upload helper
     const putFile = async (bucket: 'dar-photos' | 'dar-videos', f: File) => {
-      // Read once
       const ab = await f.arrayBuffer()
       const u8 = new Uint8Array(ab)
 
-      // Hash works with Uint8Array
       const hash = crypto.createHash('sha256').update(u8).digest('hex')
-
-      // Buffer for upload
       const buf = Buffer.from(u8)
 
       const ext = (f.name?.split('.').pop() || 'bin').toLowerCase()
@@ -62,8 +58,8 @@ export async function POST(req: NextRequest) {
       return { url: signed?.signedUrl, path, hash }
     }
 
-    // Iterate safely over FormData (TS friendly)
-    for (const [key, val] of Array.from(form.entries())) {
+    // Iterate FormData safely
+    for (const [key, val] of Array.from(form.entries() as [string, FormDataEntryValue][])) {
       if (val instanceof File) {
         if (key === 'photos') {
           const { url, path, hash } = await putFile('dar-photos', val)
@@ -112,4 +108,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e.message || 'Upload failed' }, { status: 500 })
   }
 }
+
 
