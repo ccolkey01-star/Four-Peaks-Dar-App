@@ -61,7 +61,7 @@ export async function POST(req: NextRequest){
   return { url: signed?.signedUrl, path, hash };
 };
 
-    for (const [key, val] of form.entries()){
+    for (const [key, val] of Array.from(form.entries())){
       if (val instanceof File){
         if (key === 'photos'){
           const { url, path, hash } = await putFile('dar-photos', val)
