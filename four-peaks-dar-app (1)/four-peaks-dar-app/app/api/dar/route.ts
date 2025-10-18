@@ -58,20 +58,28 @@ export async function POST(req: NextRequest) {
       return { url: signed?.signedUrl, path, hash }
     }
 
-    // Iterate FormData safely
-    for (const [key, val] of Array.from(form.entries() as [string, FormDataEntryValue][])) {
-      if (val instanceof File) {
-        if (key === 'photos') {
-          const { url, path, hash } = await putFile('dar-photos', val)
-          photoUrls.push({ url, path })
-          fileHashes.push({ path, sha256: hash })
-        } else if (key === 'videos') {
-          const { url, path, hash } = await putFile('dar-videos', val)
-          videoUrls.push({ url, path })
-          fileHashes.push({ path, sha256: hash })
-        }
-      }
+   // Iterate FormData safely (no iterator typing issues)
+const uploads: Promise<void>[] = [];
+
+form.forEach((val, key) => {
+  if (val instanceof File) {
+    if (key === 'photos') {
+      uploads.push((async () => {
+        const { url, path, hash } = await putFile('dar-photos', val);
+        photoUrls.push({ url, path });
+        fileHashes.push({ path, sha256: hash });
+      })());
+    } else if (key === 'videos') {
+      uploads.push((async () => {
+        const { url, path, hash } = await putFile('dar-videos', val);
+        videoUrls.push({ url, path });
+        fileHashes.push({ path, sha256: hash });
+      })());
     }
+  }
+});
+
+await Promise.all(uploads);
 
     const rec = {
       created_by: user.id,
