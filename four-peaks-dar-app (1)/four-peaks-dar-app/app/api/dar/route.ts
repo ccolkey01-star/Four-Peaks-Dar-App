@@ -31,16 +31,35 @@ export async function POST(req: NextRequest){
     const videoUrls:any[] = []
     const fileHashes:any[] = []
 
-    async function putFile(bucket:'dar-photos'|'dar-videos', f: File){
-      const buf = Buffer.from(await f.arrayBuffer())
-      const hash = crypto.createHash('sha256').update(Uint8Array.from(buf)).digest('hex')
-      const ext = (f.name?.split('.').pop() || 'bin').toLowerCase()
-      const path = `${user.id}/${reportId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-      const { error: upErr } = await supabaseAdmin.storage.from(bucket).upload(path, buf, { contentType: (f as any).type || 'application/octet-stream' })
-      if (upErr) throw upErr
-      const { data: signed } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 60*60*24*30)
-      return { url: signed?.signedUrl, path, hash }
-    }
+    const putFile = async (bucket: 'dar-photos' | 'dar-videos', f: File) => {
+  // Read once
+  const ab = await f.arrayBuffer();
+  const u8 = new Uint8Array(ab);
+
+  // Hash (works on Vercel)
+  const hash = crypto.createHash('sha256').update(u8).digest('hex');
+
+  // Buffer for upload
+  const buf = Buffer.from(u8);
+
+  const ext = (f.name?.split('.').pop() || 'bin').toLowerCase();
+  const path = `${user.id}/${reportId}/${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2)}.${ext}`;
+
+  const { error: upErr } = await supabaseAdmin.storage
+    .from(bucket)
+    .upload(path, buf, {
+      contentType: (f as any).type || 'application/octet-stream',
+    });
+  if (upErr) throw upErr;
+
+  const { data: signed } = await supabaseAdmin.storage
+    .from(bucket)
+    .createSignedUrl(path, 60 * 60 * 24 * 30);
+
+  return { url: signed?.signedUrl, path, hash };
+};
 
     for (const [key, val] of form.entries()){
       if (val instanceof File){
